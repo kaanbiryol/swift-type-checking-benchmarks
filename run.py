@@ -4,9 +4,10 @@ import sys
 
 if len(sys.argv) < 3:
     print("Usage: python run.py <example_number> <number_of_iteration>")
-    sys.exit(1)  # Exit the script with a non-zero status code
+    sys.exit(1) 
 
 filenames = []
+code = []
 example_number = sys.argv[1]
 number_of_iteration = sys.argv[2]
 
@@ -28,8 +29,8 @@ elif example_number == "2":
     filenames = ["a", "b", "c", "d"]
     code = [
         'let a{} = ViewModel(value: "test")',
-        'let b{}: ViewModel = ViewModel(value: "test")'
-        'let c{}: ViewModel = .init(value: "test")'
+        'let b{}: ViewModel = ViewModel(value: "test")',
+        'let c{}: ViewModel = .init(value: "test")',
         'let d{}: ViewModel = ViewModel.init(value: "test")'
     ]
 
