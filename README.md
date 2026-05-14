@@ -29,11 +29,13 @@ For example:
 python3 run.py 1 100
 ```
 
-The script writes generated Swift files into the repository root and benchmarks each one with:
+The script writes all generated Swift files for the selected example into the repository root, then benchmarks them together with one `hyperfine` run. Each generated file is checked with:
 
 ```sh
 xcrun swiftc -typecheck <file>.swift
 ```
+
+The `hyperfine` output uses command names such as `inferred function result (a.swift)` and `explicit String result (b.swift)` so the summary identifies which variant was faster.
 
 ## Examples
 
@@ -42,6 +44,9 @@ xcrun swiftc -typecheck <file>.swift
 | `0` | Different ways to initialize `String` values. |
 | `1` | Passing a `ViewModel` with an explicit type name versus shorthand `.init(...)`. |
 | `2` | Different ways to initialize and annotate `ViewModel` values. |
+| `3` | Simple function result where an explicit annotation adds overhead. |
+| `4` | Solver-heavy `map`/`reduce` expression where an explicit result type helps. |
+| `5` | `flatMap`/`reduce` expression where explicit closure and result types help. |
 
 ## Generated Files
 
