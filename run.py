@@ -11,42 +11,27 @@ func doSomething(viewModel: ViewModel) -> String {
 }
 """
 
-NUMERIC_OVERLOAD_PRELUDE = """
-func numericOverloaded(_ value: Int) -> Int {
-    return value
+VIEW_MODEL_OVERLOAD_PRELUDE = """
+struct ViewModel {
+    let value: Int
+    let name: String
 }
-func numericOverloaded(_ value: Int8) -> Int8 {
-    return value
+struct PreviewViewModel {
+    let value: Int
+    let name: String
 }
-func numericOverloaded(_ value: Int16) -> Int16 {
-    return value
+struct LegacyViewModel {
+    let value: Int
+    let name: String
 }
-func numericOverloaded(_ value: Int32) -> Int32 {
-    return value
+func score(_ model: ViewModel) -> Int {
+    return model.value
 }
-func numericOverloaded(_ value: Int64) -> Int64 {
-    return value
+func score(_ model: PreviewViewModel) -> Int16 {
+    return Int16(model.value)
 }
-func numericOverloaded(_ value: UInt) -> UInt {
-    return value
-}
-func numericOverloaded(_ value: UInt8) -> UInt8 {
-    return value
-}
-func numericOverloaded(_ value: UInt16) -> UInt16 {
-    return value
-}
-func numericOverloaded(_ value: UInt32) -> UInt32 {
-    return value
-}
-func numericOverloaded(_ value: UInt64) -> UInt64 {
-    return value
-}
-func numericOverloaded(_ value: Float) -> Float {
-    return value
-}
-func numericOverloaded(_ value: Double) -> Double {
-    return value
+func score(_ model: LegacyViewModel) -> Double {
+    return Double(model.value)
 }
 """
 
@@ -121,45 +106,6 @@ EXAMPLES = {
         ],
     },
     "2": {
-        "prelude": VIEW_MODEL_PRELUDE,
-        "variants": [
-            ("inferred ViewModel initializer", "a", 'let a{} = ViewModel(value: "test")'),
-            ("explicit ViewModel annotation", "b", 'let b{}: ViewModel = ViewModel(value: "test")'),
-            ("explicit annotation with .init", "c", 'let c{}: ViewModel = .init(value: "test")'),
-            ("explicit ViewModel.init call", "d", 'let d{}: ViewModel = ViewModel.init(value: "test")'),
-        ],
-    },
-    "3": {
-        "prelude": VIEW_MODEL_PRELUDE,
-        "variants": [
-            (
-                "inferred function result",
-                "a",
-                'let a{} = doSomething(viewModel: ViewModel(value: "test"))',
-            ),
-            (
-                "explicit String result",
-                "b",
-                'let b{}: String = doSomething(viewModel: ViewModel(value: "test"))',
-            ),
-        ],
-    },
-    "4": {
-        "prelude": NUMERIC_OVERLOAD_PRELUDE,
-        "variants": [
-            (
-                "inferred overloaded map/reduce",
-                "a",
-                'let a{} = [1, 2, 3, 4, 5].map {{ numericOverloaded($0) + 1 }}.reduce(0, +)',
-            ),
-            (
-                "explicit Int result",
-                "b",
-                'let b{}: Int = [1, 2, 3, 4, 5].map {{ numericOverloaded($0) + 1 }}.reduce(0, +)',
-            ),
-        ],
-    },
-    "5": {
         "prelude": "",
         "variants": [
             (
@@ -174,7 +120,7 @@ EXAMPLES = {
             ),
         ],
     },
-    "6": {
+    "3": {
         "prelude": AMBIGUOUS_INIT_PRELUDE,
         "variants": [
             (
@@ -186,6 +132,21 @@ EXAMPLES = {
                 "shorthand .init in numeric overload",
                 "b",
                 'let b{} = choose(.init(value: 1, name: "test")) + choose(.init(value: 2, name: "test")) + 1',
+            ),
+        ],
+    },
+    "4": {
+        "prelude": VIEW_MODEL_OVERLOAD_PRELUDE,
+        "variants": [
+            (
+                "explicit ViewModel initializer",
+                "a",
+                'let a{} = score(ViewModel(value: 1, name: "test")) + score(ViewModel(value: 2, name: "test")) + 1',
+            ),
+            (
+                "shorthand .init ViewModel",
+                "b",
+                'let b{} = score(.init(value: 1, name: "test")) + score(.init(value: 2, name: "test")) + 1',
             ),
         ],
     },
