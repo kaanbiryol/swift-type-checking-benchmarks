@@ -20,13 +20,19 @@ brew install hyperfine
 ## Usage
 
 ```sh
-python3 run.py <example_number> <number_of_iterations>
+python3 run.py <example_number> <number_of_iterations> [--warmup N] [--runs N]
 ```
 
 For example:
 
 ```sh
 python3 run.py 1 100
+```
+
+To run each variant with 3 warmup runs and exactly 20 timed runs:
+
+```sh
+python3 run.py 5 300 --warmup 3 --runs 20
 ```
 
 The script writes all generated Swift files for the selected example into the repository root, then benchmarks them together with one `hyperfine` run. Each generated file is checked with:
