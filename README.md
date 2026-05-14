@@ -50,17 +50,44 @@ The `hyperfine` output uses command names such as `inferred function result (a.s
 | `0` | Different ways to initialize `String` values. |
 | `1` | Passing a `ViewModel` with an explicit type name versus shorthand `.init(...)`. |
 | `2` | Different ways to initialize and annotate `ViewModel` values. |
-| `3` | Simple function result where an explicit annotation adds overhead. |
+| `3` | Simple function result with inferred versus explicit result annotation. |
 | `4` | Solver-heavy `map`/`reduce` expression where an explicit result type helps. |
 | `5` | `flatMap`/`reduce` expression where explicit closure and result types help. |
 | `6` | Repeated overloaded numeric expression where explicit initialization is faster than shorthand `.init`. |
 
-## Generated Files
+## Observed Results
 
-Running the benchmark creates temporary files named `a.swift`, `b.swift`, `c.swift`, and `d.swift`, depending on the selected example. These files are ignored by Git.
+These results are from one local run. They are useful for comparing the benchmark variants on this machine, but they are not universal Swift performance rules.
 
-To remove them manually:
+Benchmark protocol:
 
 ```sh
-rm -f a.swift b.swift c.swift d.swift
+python3 run.py <example> 300 --warmup 1 --runs 10
 ```
+
+Environment:
+
+| Field | Value |
+| --- | --- |
+| Date | 2026-05-14 |
+| Machine | Apple M1 Pro |
+| CPU count | 8 |
+| Memory | 32 GiB |
+| OS | macOS 26.3.1 (25D771280a) |
+| Swift | Apple Swift 6.3 (`swiftlang-6.3.0.123.5 clang-2100.0.123.102`) |
+| Target | `arm64-apple-macosx26.0` |
+| hyperfine | 1.19.0 |
+
+Results:
+
+| Example | Inferred / shorthand | Explicit | Result |
+| --- | --- | --- | --- |
+| `0` | `let a = "hello, world!"` — 130.4 ms | `let c: String = .init(...)` — 226.3 ms | Inferred was 1.73x faster. |
+| `1` | `doSomething(viewModel: .init(...))` — 151.5 ms | `doSomething(viewModel: ViewModel(...))` — 167.5 ms | Inferred was 1.11x faster. |
+| `2` | `let a = ViewModel(...)` — 150.0 ms | `let c: ViewModel = .init(...)` — 146.5 ms | Explicit was 1.02x faster. |
+| `3` | `let a = doSomething(...)` — 185.8 ms | `let b: String = doSomething(...)` — 177.1 ms | Explicit was 1.05x faster. |
+| `4` | inferred `map`/`reduce` result — 1.086 s | explicit `Int` result — 913.2 ms | Explicit was 1.19x faster. |
+| `5` | inferred `flatMap` closure/result — 3.829 s | explicit closure/result types — 391.0 ms | Explicit was 9.79x faster. |
+| `6` | shorthand `.init` in overloaded expression — 5.650 s | explicit `IntPayload(...)` — 346.1 ms | Explicit was 16.33x faster. |
+
+Interpretation: simple initializer and annotation forms are often close, and small differences can change between runs. The largest effects appear when annotations remove meaningful solver ambiguity: closure parameter/return types, overloaded calls, and contextual shorthand `.init`.
