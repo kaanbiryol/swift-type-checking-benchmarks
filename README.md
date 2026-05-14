@@ -6,8 +6,6 @@ The original script comes from this [Swift Forums discussion](https://forums.swi
 
 ## Requirements
 
-- macOS with Xcode or the Xcode Command Line Tools installed
-- `xcrun swiftc`
 - Python 3
 - [`hyperfine`](https://github.com/sharkdp/hyperfine)
 
@@ -20,19 +18,25 @@ brew install hyperfine
 ## Usage
 
 ```sh
-python3 run.py <benchmark_number> <number_of_iterations> [--warmup N] [--runs N]
+python3 run.py <benchmark_name> <number_of_iterations> [--warmup N] [--runs N]
+```
+
+List the available benchmark names:
+
+```sh
+python3 run.py --list
 ```
 
 For example:
 
 ```sh
-python3 run.py 1 100
+python3 run.py flatmap-chain 100
 ```
 
 To run each variant with 3 warmup runs and exactly 20 timed runs:
 
 ```sh
-python3 run.py 4 300 --warmup 3 --runs 20
+python3 run.py overloaded-model-init 300 --warmup 3 --runs 20
 ```
 
 The script writes all generated Swift files for the selected benchmark into the repository root, then benchmarks them together with one `hyperfine` run. Each generated file is checked with:
@@ -41,7 +45,16 @@ The script writes all generated Swift files for the selected benchmark into the 
 xcrun swiftc -typecheck <file>.swift
 ```
 
-The `hyperfine` output uses command names such as `inferred flatMap closure/result (a.swift)` and `explicit flatMap closure/result (b.swift)` so the summary identifies which variant was faster.
+## Benchmarks
+
+| Benchmark | What it exercises |
+| --- | --- |
+| `contextual-init` | Shorthand `.init` passed to a function with a concrete argument type. |
+| `flatmap-chain` | Closure parameter and return inference through `flatMap` and `reduce`. |
+| `overloaded-payload-init` | Shorthand `.init` while choosing among overloaded payload/result types. |
+| `overloaded-model-init` | Shorthand `.init` in overloaded model scoring calls. |
+| `overloaded-inits` | One nominal type with several initializer overloads. |
+| `overloaded-literals` | Overloaded array and numeric literals. |
 
 ## Observed Results
 
@@ -50,7 +63,7 @@ These results are from one local run. They are useful for comparing the benchmar
 Benchmark protocol:
 
 ```sh
-python3 run.py <example> 300 --warmup 1 --runs 10
+python3 run.py <benchmark_name> 300 --warmup 1 --runs 10
 ```
 
 Environment:
@@ -68,12 +81,11 @@ Environment:
 
 Results:
 
-| Example | Inferred / shorthand | Explicit | Result |
-| --- | --- | --- | --- |
-| `0` | `let a = "hello, world!"` — 130.4 ms | `let c: String = .init(...)` — 226.3 ms | Inferred was 1.73x faster. |
-| `1` | `doSomething(viewModel: .init(...))` — 151.5 ms | `doSomething(viewModel: ViewModel(...))` — 167.5 ms | Inferred was 1.11x faster. |
-| `2` | inferred `flatMap` closure/result — 3.829 s | explicit closure/result types — 391.0 ms | Explicit was 9.79x faster. |
-| `3` | shorthand `.init` in overloaded expression — 5.650 s | explicit `IntPayload(...)` — 346.1 ms | Explicit was 16.33x faster. |
-| `4` | `score(.init(...))` — 1.392 s | `score(ViewModel(...))` — 320.5 ms | Explicit was 4.34x faster. |
+Rows are included only for benchmarks that were run under this protocol.
 
-Interpretation: simple initializer and annotation forms are often close, and small differences can change between runs. The largest effects appear when annotations remove meaningful solver ambiguity: closure parameter/return types, overloaded calls, and contextual shorthand `.init`.
+| Benchmark | Inferred / shorthand | Explicit | Result |
+| --- | --- | --- | --- |
+| `contextual-init` | `doSomething(viewModel: .init(...))` — 151.5 ms | `doSomething(viewModel: ViewModel(...))` — 167.5 ms | Inferred was 1.11x faster. |
+| `flatmap-chain` | inferred `flatMap` closure/result — 3.829 s | explicit closure/result types — 391.0 ms | Explicit was 9.79x faster. |
+| `overloaded-payload-init` | shorthand `.init` in overloaded expression — 5.650 s | explicit `IntPayload(...)` — 346.1 ms | Explicit was 16.33x faster. |
+| `overloaded-model-init` | `score(.init(...))` — 1.392 s | `score(ViewModel(...))` — 320.5 ms | Explicit was 4.34x faster. |

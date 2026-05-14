@@ -80,17 +80,56 @@ func choose(_ payload: DoublePayload) -> Double {
 }
 """
 
+OVERLOADED_INIT_PRELUDE = """
+struct Quantity {
+    let value: Int
+
+    init(_ value: Int) {
+        self.value = value
+    }
+
+    init(_ value: Int8) {
+        self.value = Int(value)
+    }
+
+    init(_ value: Int16) {
+        self.value = Int(value)
+    }
+
+    init(_ value: Int32) {
+        self.value = Int(value)
+    }
+
+    init(_ value: Double) {
+        self.value = Int(value)
+    }
+}
+func measure(_ quantity: Quantity) -> Int {
+    return quantity.value
+}
+"""
+
+OVERLOADED_LITERAL_PRELUDE = """
+func total(_ values: [Int]) -> Int {
+    return values.reduce(0, +)
+}
+func total(_ values: [Int8]) -> Int8 {
+    return values.reduce(0, +)
+}
+func total(_ values: [Int16]) -> Int16 {
+    return values.reduce(0, +)
+}
+func total(_ values: [Int32]) -> Int32 {
+    return values.reduce(0, +)
+}
+func total(_ values: [Double]) -> Double {
+    return values.reduce(0, +)
+}
+"""
+
 EXAMPLES = {
-    "0": {
-        "prelude": "",
-        "variants": [
-            ("inferred string literal", "a", 'let a{} = "hello, world!"'),
-            ("String initializer", "b", 'let b{} = String("hello, world!")'),
-            ("explicit String .init", "c", 'let c{}: String = .init("hello, world!")'),
-            ("explicit String literal", "d", 'let d{}: String = "hello, world!"'),
-        ],
-    },
-    "1": {
+    "contextual-init": {
+        "summary": "shorthand .init with a concrete function-argument context",
         "prelude": VIEW_MODEL_PRELUDE,
         "variants": [
             (
@@ -105,7 +144,8 @@ EXAMPLES = {
             ),
         ],
     },
-    "2": {
+    "flatmap-chain": {
+        "summary": "closure parameter and result inference through flatMap/reduce",
         "prelude": "",
         "variants": [
             (
@@ -120,7 +160,8 @@ EXAMPLES = {
             ),
         ],
     },
-    "3": {
+    "overloaded-payload-init": {
+        "summary": "shorthand .init while resolving overloaded payload/result types",
         "prelude": AMBIGUOUS_INIT_PRELUDE,
         "variants": [
             (
@@ -135,7 +176,8 @@ EXAMPLES = {
             ),
         ],
     },
-    "4": {
+    "overloaded-model-init": {
+        "summary": "shorthand .init in overloaded model scoring calls",
         "prelude": VIEW_MODEL_OVERLOAD_PRELUDE,
         "variants": [
             (
@@ -147,6 +189,38 @@ EXAMPLES = {
                 "shorthand .init ViewModel",
                 "b",
                 'let b{} = score(.init(value: 1, name: "test")) + score(.init(value: 2, name: "test")) + 1',
+            ),
+        ],
+    },
+    "overloaded-inits": {
+        "summary": "one nominal type with several initializer overloads",
+        "prelude": OVERLOADED_INIT_PRELUDE,
+        "variants": [
+            (
+                "shorthand .init with overloaded initializers",
+                "a",
+                'let a{} = measure(.init(1)) + measure(.init(2)) + measure(.init(3))',
+            ),
+            (
+                "explicit Quantity initializer and Int literals",
+                "b",
+                'let b{} = measure(Quantity(Int(1))) + measure(Quantity(Int(2))) + measure(Quantity(Int(3)))',
+            ),
+        ],
+    },
+    "overloaded-literals": {
+        "summary": "overloaded array and numeric literals",
+        "prelude": OVERLOADED_LITERAL_PRELUDE,
+        "variants": [
+            (
+                "inferred overloaded array literals",
+                "a",
+                'let a{} = total([1, 2, 3]) + total([4, 5, 6]) + 1',
+            ),
+            (
+                "explicit Int array literals",
+                "b",
+                'let b{}: Int = total([Int(1), Int(2), Int(3)]) + total([Int(4), Int(5), Int(6)]) + 1',
             ),
         ],
     },
@@ -171,8 +245,13 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Generate Swift type-checking benchmarks and compare them with hyperfine."
     )
-    parser.add_argument("example_number", choices=sorted(EXAMPLES.keys()))
-    parser.add_argument("number_of_iterations", type=positive_int)
+    parser.add_argument("example_name", nargs="?", choices=sorted(EXAMPLES.keys()))
+    parser.add_argument("number_of_iterations", nargs="?", type=positive_int)
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        help="list available benchmark names and exit",
+    )
     parser.add_argument(
         "--warmup",
         type=non_negative_int,
@@ -184,7 +263,20 @@ def parse_args():
         type=positive_int,
         help="exact number of timed hyperfine runs for each command",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+
+    if args.list:
+        for name, example in EXAMPLES.items():
+            print("{}: {}".format(name, example["summary"]))
+        raise SystemExit(0)
+
+    if args.example_name is None:
+        parser.error("the following argument is required: example_name")
+
+    if args.number_of_iterations is None:
+        parser.error("the following argument is required: number_of_iterations")
+
+    return args
 
 
 def write_swift_file(filename, prelude, code, number_of_iterations):
@@ -197,20 +289,25 @@ def write_swift_file(filename, prelude, code, number_of_iterations):
             f.write((code + "\n").format(j))
 
 
-args = parse_args()
-example = EXAMPLES[args.example_number]
-commands = []
-command_names = []
+def main():
+    args = parse_args()
+    example = EXAMPLES[args.example_name]
+    commands = []
+    command_names = []
 
-for (label, filename, code) in example["variants"]:
-    benchmark_label = "{} ({}.swift)".format(label, filename)
-    write_swift_file(filename, example["prelude"], code, args.number_of_iterations)
-    print("Generated:", benchmark_label, "=>", code.format("{}"), flush=True)
-    command_names.extend(["--command-name", benchmark_label])
-    commands.append("xcrun swiftc -typecheck {}".format(filename + ".swift"))
+    for (label, filename, code) in example["variants"]:
+        benchmark_label = "{} ({}.swift)".format(label, filename)
+        write_swift_file(filename, example["prelude"], code, args.number_of_iterations)
+        print("Generated:", benchmark_label, "=>", code.format("{}"), flush=True)
+        command_names.extend(["--command-name", benchmark_label])
+        commands.append("xcrun swiftc -typecheck {}".format(filename + ".swift"))
 
-hyperfine_args = ["hyperfine", "--warmup", str(args.warmup)]
-if args.runs is not None:
-    hyperfine_args.extend(["--runs", str(args.runs)])
+    hyperfine_args = ["hyperfine", "--warmup", str(args.warmup)]
+    if args.runs is not None:
+        hyperfine_args.extend(["--runs", str(args.runs)])
 
-subprocess.run([*hyperfine_args, *command_names, *commands], check=True)
+    subprocess.run([*hyperfine_args, *command_names, *commands], check=True)
+
+
+if __name__ == "__main__":
+    main()
