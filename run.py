@@ -50,6 +50,51 @@ func numericOverloaded(_ value: Double) -> Double {
 }
 """
 
+AMBIGUOUS_INIT_PRELUDE = """
+struct IntPayload {
+    let value: Int
+    let name: String
+}
+struct Int8Payload {
+    let value: Int
+    let name: String
+}
+struct Int16Payload {
+    let value: Int
+    let name: String
+}
+struct Int32Payload {
+    let value: Int
+    let name: String
+}
+struct Int64Payload {
+    let value: Int
+    let name: String
+}
+struct DoublePayload {
+    let value: Int
+    let name: String
+}
+func choose(_ payload: IntPayload) -> Int {
+    return payload.value
+}
+func choose(_ payload: Int8Payload) -> Int8 {
+    return Int8(payload.value)
+}
+func choose(_ payload: Int16Payload) -> Int16 {
+    return Int16(payload.value)
+}
+func choose(_ payload: Int32Payload) -> Int32 {
+    return Int32(payload.value)
+}
+func choose(_ payload: Int64Payload) -> Int64 {
+    return Int64(payload.value)
+}
+func choose(_ payload: DoublePayload) -> Double {
+    return Double(payload.value)
+}
+"""
+
 EXAMPLES = {
     "0": {
         "prelude": "",
@@ -126,6 +171,21 @@ EXAMPLES = {
                 "explicit flatMap closure/result",
                 "b",
                 'let b{}: Int = [1, 2, 3].flatMap {{ (value: Int) -> [Int] in [value, value + 1] }}.reduce(0, +)',
+            ),
+        ],
+    },
+    "6": {
+        "prelude": AMBIGUOUS_INIT_PRELUDE,
+        "variants": [
+            (
+                "explicit initializer in numeric overload",
+                "a",
+                'let a{} = choose(IntPayload(value: 1, name: "test")) + choose(IntPayload(value: 2, name: "test")) + 1',
+            ),
+            (
+                "shorthand .init in numeric overload",
+                "b",
+                'let b{} = choose(.init(value: 1, name: "test")) + choose(.init(value: 2, name: "test")) + 1',
             ),
         ],
     },

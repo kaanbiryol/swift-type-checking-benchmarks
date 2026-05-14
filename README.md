@@ -53,6 +53,7 @@ The `hyperfine` output uses command names such as `inferred function result (a.s
 | `3` | Simple function result where an explicit annotation adds overhead. |
 | `4` | Solver-heavy `map`/`reduce` expression where an explicit result type helps. |
 | `5` | `flatMap`/`reduce` expression where explicit closure and result types help. |
+| `6` | Repeated overloaded numeric expression where explicit initialization is faster than shorthand `.init`. |
 
 ## Generated Files
 
